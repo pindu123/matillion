@@ -1,0 +1,128 @@
+type: "transformation"
+version: "1.0"
+pipeline:
+  components:
+    CUSTOMER:
+      type: "table-input"
+      parameters:
+        componentName: "CUSTOMER"
+        database: "SNOWFLAKE_SAMPLE_DATA"
+        schema: "TPCH_SF1"
+        targetTable: "CUSTOMER"
+        columnNames:
+        - "C_CUSTKEY"
+        - "C_NAME"
+        - "C_ADDRESS"
+        - "C_NATIONKEY"
+        - "C_PHONE"
+        - "C_ACCTBAL"
+        - "C_MKTSEGMENT"
+        - "C_COMMENT"
+        timeOffset:
+    NATION:
+      type: "table-input"
+      parameters:
+        componentName: "NATION"
+        database: "SNOWFLAKE_SAMPLE_DATA"
+        schema: "TPCH_SF1"
+        targetTable: "NATION"
+        columnNames:
+        - "N_NATIONKEY"
+        - "N_NAME"
+        - "N_REGIONKEY"
+        - "N_COMMENT"
+        timeOffset:
+    Join:
+      type: "join"
+      sources:
+      - "NATION"
+      - "CUSTOMER"
+      parameters:
+        componentName: "Join"
+        mainTable: "CUSTOMER"
+        mainTableAlias: "c"
+        joins:
+        - - "NATION"
+          - "n"
+          - "Left"
+        joinExpressions:
+        - - "\"c\".\"C_NATIONKEY\"=\"n\".\"N_NATIONKEY\""
+          - "c_Left_n"
+        columnMappings:
+        - - "c.C_CUSTKEY"
+          - "C_CUSTKEY"
+        - - "c.C_NAME"
+          - "C_NAME"
+        - - "c.C_ADDRESS"
+          - "C_ADDRESS"
+        - - "c.C_PHONE"
+          - "C_PHONE"
+        - - "c.C_ACCTBAL"
+          - "C_ACCTBAL"
+        - - "c.C_MKTSEGMENT"
+          - "C_MKTSEGMENT"
+        - - "n.N_NAME"
+          - "N_NAME"
+    Filter:
+      type: "filter"
+      sources:
+      - "Join"
+      parameters:
+        componentName: "Filter"
+        mode: "Basic"
+        filterConditions:
+        - - "N_NAME"
+          - "Is"
+          - "Equal to"
+          - "India"
+        combineCondition: "And"
+    Rewrite Table:
+      type: "rewrite-table"
+      sources:
+      - "Filter"
+      parameters:
+        componentName: "Rewrite Table"
+        warehouse: "RETAIL_WH"
+        database: "RETAIL_DB"
+        schema: "PUBLIC"
+        targetTable: "${country}_customer"
+        orderBy:
+      postProcessing:
+        updateOutputMessage:
+        updateScalarVariables:
+        updateGridVariables:
+  variables:
+    country:
+      metadata:
+        type: "TEXT"
+        description: ""
+        scope: "SHARED"
+        visibility: "PUBLIC"
+      defaultValue: "India"
+design:
+  components:
+    CUSTOMER:
+      position:
+        x: -390
+        "y": -240
+      tempMetlId:
+    NATION:
+      position:
+        x: -390
+        "y": -110
+      tempMetlId:
+    Join:
+      position:
+        x: -280
+        "y": -170
+      tempMetlId:
+    Filter:
+      position:
+        x: -120
+        "y": -170
+      tempMetlId:
+    Rewrite Table:
+      position:
+        x: -30
+        "y": -170
+      tempMetlId:
