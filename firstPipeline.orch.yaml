@@ -1,0 +1,71 @@
+type: "orchestration"
+version: "1.0"
+pipeline:
+  components:
+    Start:
+      type: "start"
+      transitions:
+        unconditional:
+        - "Table Iterator"
+      parameters:
+        componentName: "Start"
+      postProcessing:
+        updateOutputMessage:
+        updateScalarVariables:
+        updateGridVariables:
+    Run Transformation:
+      type: "run-transformation"
+      parameters:
+        componentName: "Run Transformation"
+        transformationJob: "firstTransformation.tran.yaml"
+        setScalarVariables:
+        - - "country"
+          - "${country_1}"
+        setGridVariables:
+      postProcessing:
+        updateOutputMessage:
+        updateScalarVariables:
+        updateGridVariables:
+    Table Iterator:
+      type: "table-iterator"
+      iterationTarget: "Run Transformation"
+      parameters:
+        componentName: "Table Iterator"
+        mode: "Advanced"
+        concurrency: "Sequential"
+        breakOnFailure: "No"
+        stopOnCondition: "No"
+        recordValuesInTaskHistory: "Yes"
+        query: "SELECT N_NAME FROM SNOWFLAKE_SAMPLE_DATA.TPCH_SF1.NATION"
+        columnMapping1:
+        - - "N_NAME"
+          - "country_1"
+      postProcessing:
+        updateOutputMessage:
+        updateScalarVariables:
+        updateGridVariables:
+  variables:
+    country_1:
+      metadata:
+        type: "TEXT"
+        description: ""
+        scope: "SHARED"
+        visibility: "PUBLIC"
+      defaultValue: ""
+design:
+  components:
+    Start:
+      position:
+        x: -570
+        "y": -170
+      tempMetlId:
+    Run Transformation:
+      position:
+        x: -430
+        "y": -140
+      tempMetlId:
+    Table Iterator:
+      position:
+        x: -430
+        "y": -160
+      tempMetlId:
