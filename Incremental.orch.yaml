@@ -1,0 +1,100 @@
+type: "orchestration"
+version: "1.0"
+pipeline:
+  components:
+    Start:
+      type: "start"
+      transitions:
+        unconditional:
+        - "Table Iterator"
+      parameters:
+        componentName: "Start"
+      postProcessing:
+        updateOutputMessage:
+        updateScalarVariables:
+        updateGridVariables:
+    Table Iterator:
+      type: "table-iterator"
+      transitions:
+        success:
+        - "SQL Script"
+      iterationTarget: "Run Transformation"
+      skipped: false
+      parameters:
+        componentName: "Table Iterator"
+        mode: "Basic"
+        concurrency: "Sequential"
+        breakOnFailure: "No"
+        stopOnCondition: "No"
+        recordValuesInTaskHistory: "Yes"
+        database: "RETAIL_DB"
+        schema: "PUBLIC"
+        targetTable: "LOAD_METADATA"
+        columnMapping:
+        - - "LAST_UPDATED"
+          - "last_updated"
+        orderBy:
+        sort: "Ascending"
+      postProcessing:
+        updateOutputMessage:
+        updateScalarVariables:
+        updateGridVariables:
+    Run Transformation:
+      type: "run-transformation"
+      skipped: false
+      parameters:
+        componentName: "Run Transformation"
+        transformationJob: "transform.tran.yaml"
+        setScalarVariables:
+        - - "last_updated"
+          - "${last_updated}"
+        setGridVariables:
+      postProcessing:
+        updateOutputMessage:
+        updateScalarVariables:
+        updateGridVariables:
+    SQL Script:
+      type: "sql-executor"
+      parameters:
+        componentName: "SQL Script"
+        scriptLocation: "Component"
+        declareSqlVariables: "Include selected"
+        variablesToInclude:
+        enableVariableResolution: "Yes"
+        sqlScript: "UPDATE RETAIL_DB.PUBLIC.LOAD_METADATA\r\nSET LAST_UPDATED = (\r\
+          \n    SELECT MAX(last_updated)\r\n    FROM RETAIL_DB.PUBLIC.student_source\r\
+          \n)\r\nWHERE TABLE_NAME = 'student_source';"
+      postProcessing:
+        updateOutputMessage: "select * from load_metadata"
+        updateScalarVariables:
+        updateGridVariables:
+  variables:
+    last_updated:
+      metadata:
+        type: "TEXT"
+        description: ""
+        scope: "SHARED"
+        visibility: "PUBLIC"
+      defaultValue: ""
+design:
+  components:
+    Start:
+      position:
+        x: -750
+        "y": -100
+      tempMetlId:
+    Table Iterator:
+      position:
+        x: -530
+        "y": -110
+      tempMetlId:
+    Run Transformation:
+      position:
+        x: -530
+        "y": -110
+      tempMetlId:
+    SQL Script:
+      position:
+        x: -370
+        "y": -90
+      tempMetlId:
