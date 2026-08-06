@@ -1,0 +1,79 @@
+type: "transformation"
+version: "1.0"
+pipeline:
+  components:
+    STUDENT_SOURCE:
+      type: "table-input"
+      parameters:
+        componentName: "STUDENT_SOURCE"
+        database: "RETAIL_DB"
+        schema: "PUBLIC"
+        targetTable: "STUDENT_SOURCE"
+        columnNames:
+        - "ID"
+        - "STUDENT_NAME"
+        - "DEPARTMENT"
+        - "MARKS"
+        - "LAST_UPDATED"
+        timeOffset:
+    Filter:
+      type: "filter"
+      sources:
+      - "STUDENT_SOURCE"
+      parameters:
+        componentName: "Filter"
+        mode: "Advanced"
+        filterClause: "last_updated > TO_TIMESTAMP_NTZ('${last_updated}')"
+    STUDENT_TARGET:
+      type: "table-output"
+      sources:
+      - "Filter"
+      parameters:
+        componentName: "STUDENT_TARGET"
+        warehouse: "RETAIL_WH"
+        database: "RETAIL_DB"
+        schema: "CURATED"
+        targetTable: "STUDENT_TARGET"
+        fixDataTypeMismatches: "No"
+        columnMapping:
+        - - "ID"
+          - "ID"
+        - - "STUDENT_NAME"
+          - "STUDENT_NAME"
+        - - "DEPARTMENT"
+          - "DEPARTMENT"
+        - - "MARKS"
+          - "MARKS"
+        - - "LAST_UPDATED"
+          - "LAST_UPDATED"
+        orderBy:
+        outputMode: "Append"
+      postProcessing:
+        updateOutputMessage:
+        updateScalarVariables:
+        updateGridVariables:
+  variables:
+    last_updated:
+      metadata:
+        type: "TEXT"
+        description: ""
+        scope: "SHARED"
+        visibility: "PUBLIC"
+      defaultValue: ""
+design:
+  components:
+    STUDENT_SOURCE:
+      position:
+        x: -380
+        "y": -100
+      tempMetlId:
+    Filter:
+      position:
+        x: -220
+        "y": -100
+      tempMetlId:
+    STUDENT_TARGET:
+      position:
+        x: -60
+        "y": -100
+      tempMetlId:
