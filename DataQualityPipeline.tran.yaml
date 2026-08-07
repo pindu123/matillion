@@ -1,0 +1,180 @@
+type: "transformation"
+version: "1.0"
+pipeline:
+  components:
+    CUSTOMERS_RAW:
+      type: "table-input"
+      parameters:
+        componentName: "CUSTOMERS_RAW"
+        database: "RETAIL_DB"
+        schema: "RAW"
+        targetTable: "CUSTOMERS_RAW"
+        columnNames:
+        - "CUSTOMER_ID"
+        - "FIRST_NAME"
+        - "LAST_NAME"
+        - "EMAIL"
+        - "PHONE"
+        - "CITY"
+        timeOffset:
+    Calculator:
+      type: "calculator"
+      sources:
+      - "CUSTOMERS_RAW"
+      parameters:
+        componentName: "Calculator"
+        includeInputColumns: "Yes"
+        calculations:
+        - - |
+            "FIRST_NAME" || ' ' || "LAST_NAME"
+          - "fullName"
+        - - |-
+            IFF(
+                REGEXP_LIKE(
+                    "EMAIL",
+                    '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$'
+                ),
+                'Valid',
+                'Invalid'
+            )
+          - "email_valid"
+        - - "COALESCE(PHONE, 'UNKNOWN')"
+          - "PHONE"
+    Distinct:
+      type: "distinct"
+      sources:
+      - "Calculator"
+      parameters:
+        componentName: "Distinct"
+        columns:
+        - "CUSTOMER_ID"
+        - "FIRST_NAME"
+        - "LAST_NAME"
+        - "EMAIL"
+        - "CITY"
+        - "fullName"
+        - "email_valid"
+        - "PHONE"
+    Valid:
+      type: "filter"
+      sources:
+      - "Distinct"
+      parameters:
+        componentName: "Valid"
+        mode: "Basic"
+        filterConditions:
+        - - "email_valid"
+          - "Is"
+          - "Equal to"
+          - "Valid"
+        combineCondition: "And"
+    InValid:
+      type: "filter"
+      sources:
+      - "Distinct"
+      parameters:
+        componentName: "InValid"
+        mode: "Basic"
+        filterConditions:
+        - - "email_valid"
+          - "Is"
+          - "Equal to"
+          - "Invalid"
+        combineCondition: "And"
+    CUSTOMERS:
+      type: "table-output"
+      sources:
+      - "Valid"
+      parameters:
+        componentName: "CUSTOMERS"
+        warehouse: "RETAIL_WH"
+        database: "RETAIL_DB"
+        schema: "ANALYTICS"
+        targetTable: "CUSTOMERS"
+        fixDataTypeMismatches: "No"
+        columnMapping:
+        - - "CUSTOMER_ID"
+          - "CUSTOMER_ID"
+        - - "fullName"
+          - "FULL_NAME"
+        - - "EMAIL"
+          - "EMAIL"
+        - - "PHONE"
+          - "PHONE"
+        - - "CITY"
+          - "CITY"
+        orderBy:
+        outputMode: "Append"
+      postProcessing:
+        updateOutputMessage:
+        updateScalarVariables:
+        updateGridVariables:
+    CUSTOMERS_ERROR:
+      type: "table-output"
+      sources:
+      - "InValid"
+      parameters:
+        componentName: "CUSTOMERS_ERROR"
+        warehouse: "RETAIL_WH"
+        database: "RETAIL_DB"
+        schema: "ANALYTICS"
+        targetTable: "CUSTOMERS_ERROR"
+        fixDataTypeMismatches: "No"
+        columnMapping:
+        - - "CUSTOMER_ID"
+          - "CUSTOMER_ID"
+        - - "FIRST_NAME"
+          - "FIRST_NAME"
+        - - "LAST_NAME"
+          - "LAST_NAME"
+        - - "EMAIL"
+          - "EMAIL"
+        - - "PHONE"
+          - "PHONE"
+        - - "CITY"
+          - "CITY"
+        - - "email_valid"
+          - "ERROR_REASON"
+        orderBy:
+        outputMode: "Append"
+      postProcessing:
+        updateOutputMessage:
+        updateScalarVariables:
+        updateGridVariables:
+design:
+  components:
+    CUSTOMERS_RAW:
+      position:
+        x: -410
+        "y": -120
+      tempMetlId:
+    Calculator:
+      position:
+        x: -250
+        "y": -120
+      tempMetlId:
+    Distinct:
+      position:
+        x: -90
+        "y": -120
+      tempMetlId:
+    Valid:
+      position:
+        x: 70
+        "y": -240
+      tempMetlId:
+    InValid:
+      position:
+        x: 70
+        "y": -120
+      tempMetlId:
+    CUSTOMERS:
+      position:
+        x: 230
+        "y": -240
+      tempMetlId:
+    CUSTOMERS_ERROR:
+      position:
+        x: 230
+        "y": -120
+      tempMetlId:
