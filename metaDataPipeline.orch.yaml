@@ -1,0 +1,312 @@
+type: "orchestration"
+version: "1.0"
+pipeline:
+  components:
+    Start:
+      type: "start"
+      transitions:
+        unconditional:
+        - "Query Result To Grid"
+      parameters:
+        componentName: "Start"
+      postProcessing:
+        updateOutputMessage:
+        updateScalarVariables:
+        updateGridVariables:
+    Query Result To Grid:
+      type: "query-to-grid"
+      transitions:
+        success:
+        - "Grid Iterator"
+      parameters:
+        componentName: "Query Result To Grid"
+        mode: "Basic"
+        database: "RETAIL_DB"
+        schema: "METADATA"
+        table: "ETL_METADATA"
+        tableColumns:
+        - "PIPELINE_ID"
+        - "SOURCE_DATABASE"
+        - "SOURCE_SCHEMA"
+        - "SOURCE_TABLE"
+        - "TARGET_DATABASE"
+        - "TARGET_SCHEMA"
+        - "TARGET_TABLE"
+        - "LOAD_TYPE"
+        - "ACTIVE_FLAG"
+        - "EXECUTION_ORDER"
+        orderBy:
+        sort: "Ascending"
+        limit: "100"
+        gridVariable: "tableMetadata"
+        gridVariableMapping:
+        - - "PIPELINE_ID"
+          - "pipelineID"
+        - - "SOURCE_SCHEMA"
+          - "sourceSchema"
+        - - "SOURCE_TABLE"
+          - "sourceTable"
+        - - "TARGET_SCHEMA"
+          - "targetSchema"
+        - - "TARGET_TABLE"
+          - "targetTable"
+        - - "SOURCE_DATABASE"
+          - "sourceDb"
+        - - "TARGET_DATABASE"
+          - "targetDb"
+        - - "EXECUTION_ORDER"
+          - "executionOrder"
+        - - "LOAD_TYPE"
+          - "loadType"
+        filterConditions:
+        combineConditions: "And"
+      postProcessing:
+        updateOutputMessage:
+        updateScalarVariables:
+        updateGridVariables:
+    Grid Iterator:
+      type: "grid-iterator"
+      transitions:
+        success:
+        - "Logging"
+        failure:
+        - "LoggingFailure"
+      iterationTarget: "Copy Data"
+      parameters:
+        componentName: "Grid Iterator"
+        gridVariable: "tableMetadata"
+        gridIteratorVariableMapping:
+        - - "sourceSchema"
+          - "sourceSchema"
+        - - "targetSchema"
+          - "targetSchema"
+        - - "sourceTable"
+          - "sourceTable"
+        - - "targetTable"
+          - "targetTable"
+        - - "sourceDb"
+          - "sourceDb"
+        - - "targetDb"
+          - "targetDb"
+        breakOnFailure: "No"
+        concurrency: "Sequential"
+        stopOnCondition: "No"
+        recordValuesInTaskHistory: "Yes"
+      postProcessing:
+        updateOutputMessage:
+        updateScalarVariables:
+        updateGridVariables:
+    Send Email:
+      type: "send-email-v2"
+      parameters:
+        componentName: "Send Email"
+        toRecipients:
+        - "panchireddiindumathi@gmail.com"
+        ccRecipients:
+        subject: "Data Load Failed"
+        message: "Copy Data Failed \r\n${sysvar.rootPipeline.executionId}\r\n${sysvar.thisComponent.status}\r\
+          \n${sysvar.thisComponent.message}"
+        senderAddress: "ipanchireddi.miraclesoft@gmail.com"
+        replyAddress:
+        smtpUsername: "ipanchireddi.miraclesoft@gmail.com"
+        smtpPassword: "cnld szad tqyz bqfg"
+        smtpHostname: "smtp.gmail.com"
+        smtpPort: "25"
+        enableSslTls: "Yes"
+        enableStartTls: "Yes"
+        s3Location: "s3://"
+      postProcessing:
+        updateOutputMessage:
+        updateScalarVariables:
+        updateGridVariables:
+    Logging:
+      type: "sql-executor"
+      transitions:
+        success:
+        - "Send Email 2"
+      parameters:
+        componentName: "Logging"
+        scriptLocation: "Component"
+        declareSqlVariables: "Include selected"
+        variablesToInclude:
+        enableVariableResolution: "No"
+        sqlScript: "INSERT INTO RETAIL_DB.METADATA.ETL_AUDIT\r\n(\r\n    RUN_ID,\r\
+          \n    PIPELINE_ID,\r\n    SOURCE_TABLE,\r\n    TARGET_TABLE,\r\n    START_TIME,\r\
+          \n    END_TIME,\r\n    STATUS,\r\n    ROW_COUNT,\r\n    ERROR_MESSAGE\r\n\
+          )\r\nVALUES\r\n(\r\n    'RUN_001',\r\n    1,\r\n    '${sourceTable}',\r\n\
+          \    '${targetTable}',\r\n    CURRENT_TIMESTAMP(),\r\n    CURRENT_TIMESTAMP(),\r\
+          \n    'SUCCESS',\r\n    0,\r\n    NULL\r\n);"
+      postProcessing:
+        updateOutputMessage:
+        updateScalarVariables:
+        updateGridVariables:
+    LoggingFailure:
+      type: "sql-executor"
+      transitions:
+        success:
+        - "Send Email"
+      parameters:
+        componentName: "LoggingFailure"
+        scriptLocation: "Component"
+        declareSqlVariables: "Include selected"
+        variablesToInclude:
+        enableVariableResolution: "No"
+        sqlScript: "INSERT INTO RETAIL_DB.METADATA.ETL_AUDIT\r\n(\r\n    RUN_ID,\r\
+          \n    PIPELINE_ID,\r\n    SOURCE_TABLE,\r\n    TARGET_TABLE,\r\n    START_TIME,\r\
+          \n    END_TIME,\r\n    STATUS,\r\n    ROW_COUNT,\r\n    ERROR_MESSAGE\r\n\
+          )\r\nVALUES\r\n(\r\n    'RUN_001',\r\n    1,\r\n    '${sourceTable}',\r\n\
+          \    '${targetTable}',\r\n    CURRENT_TIMESTAMP(),\r\n    CURRENT_TIMESTAMP(),\r\
+          \n    'Fail',\r\n    0,\r\n    \"Data Load Failed\"\r\n);"
+      postProcessing:
+        updateOutputMessage:
+        updateScalarVariables:
+        updateGridVariables:
+    Copy Data:
+      type: "sql-executor"
+      parameters:
+        componentName: "Copy Data"
+        scriptLocation: "Component"
+        declareSqlVariables: "Include all"
+        enableVariableResolution: "Yes"
+        sqlScript: |
+          CREATE OR REPLACE TABLE ${targetDb}.${targetSchema}.${targetTable} AS
+          SELECT *
+          FROM ${sourceDb}.${sourceSchema}.${sourceTable};
+      postProcessing:
+        updateOutputMessage:
+        updateScalarVariables:
+        updateGridVariables:
+    Send Email 2:
+      type: "send-email-v2"
+      parameters:
+        componentName: "Send Email 2"
+        toRecipients:
+        - "panchireddiindumathi@gmail.com"
+        ccRecipients:
+        subject: "Data Load Failed"
+        message: "Copy Data Success \r\n${sysvar.rootPipeline.executionId}\r\n${sysvar.thisComponent.status}\r\
+          \n${sysvar.thisComponent.message}"
+        senderAddress: "ipanchireddi.miraclesoft@gmail.com"
+        replyAddress:
+        smtpUsername: "ipanchireddi.miraclesoft@gmail.com"
+        smtpPassword: "cnld szad tqyz bqfg"
+        smtpHostname: "smtp.gmail.com"
+        smtpPort: "587"
+        enableSslTls: "No"
+        enableStartTls: "Yes"
+        s3Location: "s3://"
+      postProcessing:
+        updateOutputMessage:
+        updateScalarVariables:
+        updateGridVariables:
+  variables:
+    sourceDb:
+      metadata:
+        type: "TEXT"
+        description: ""
+        scope: "SHARED"
+        visibility: "PUBLIC"
+      defaultValue: "SNOWFLAKE_SAMPLE_DATA"
+    targetTable:
+      metadata:
+        type: "TEXT"
+        description: ""
+        scope: "SHARED"
+        visibility: "PUBLIC"
+      defaultValue: "customer"
+    targetSchema:
+      metadata:
+        type: "TEXT"
+        description: ""
+        scope: "SHARED"
+        visibility: "PUBLIC"
+      defaultValue: "curated"
+    targetDb:
+      metadata:
+        type: "TEXT"
+        description: ""
+        scope: "SHARED"
+        visibility: "PUBLIC"
+      defaultValue: "retail_db"
+    sourceTable:
+      metadata:
+        type: "TEXT"
+        description: ""
+        scope: "SHARED"
+        visibility: "PUBLIC"
+      defaultValue: "customer"
+    sourceSchema:
+      metadata:
+        type: "TEXT"
+        description: ""
+        scope: "SHARED"
+        visibility: "PUBLIC"
+      defaultValue: "TPCH_SF1"
+    tableMetadata:
+      metadata:
+        type: "GRID"
+        description: ""
+        scope: "SHARED"
+        visibility: "PUBLIC"
+        columns:
+          sourceSchema:
+            columnType: "TEXT"
+          sourceTable:
+            columnType: "TEXT"
+          targetSchema:
+            columnType: "TEXT"
+          targetTable:
+            columnType: "TEXT"
+          pipelineID:
+            columnType: "TEXT"
+          sourceDb:
+            columnType: "TEXT"
+          targetDb:
+            columnType: "TEXT"
+          executionOrder:
+            columnType: "TEXT"
+          loadType:
+            columnType: "TEXT"
+      defaultValue: []
+design:
+  components:
+    Start:
+      position:
+        x: -620
+        "y": -20
+      tempMetlId:
+    Query Result To Grid:
+      position:
+        x: -480
+        "y": -20
+      tempMetlId:
+    Grid Iterator:
+      position:
+        x: -260
+        "y": -30
+      tempMetlId:
+    Send Email:
+      position:
+        x: 80
+        "y": -190
+      tempMetlId:
+    Logging:
+      position:
+        x: -100
+        "y": -10
+      tempMetlId:
+    LoggingFailure:
+      position:
+        x: -100
+        "y": -130
+      tempMetlId:
+    Copy Data:
+      position:
+        x: -260
+        "y": -10
+      tempMetlId:
+    Send Email 2:
+      position:
+        x: 90
+        "y": -10
+      tempMetlId:
