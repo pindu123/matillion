@@ -1,0 +1,82 @@
+type: "transformation"
+version: "1.0"
+pipeline:
+  components:
+    SQL:
+      type: "sql"
+      parameters:
+        componentName: "SQL"
+        query: "select * from ${sourceDb}.${sourceSchema}.${sourceTable}"
+    Table Output:
+      type: "table-output"
+      sources:
+      - "SQL"
+      parameters:
+        componentName: "Table Output"
+        warehouse: "RETAIL_WH"
+        database: "RETAIL_DB"
+        schema: "${targetSchema}"
+        targetTable: "${targetTable}"
+        fixDataTypeMismatches: "No"
+        columnMapping:
+        orderBy:
+        outputMode: "Append"
+      postProcessing:
+        updateOutputMessage:
+        updateScalarVariables:
+        updateGridVariables:
+  variables:
+    targetSchema:
+      metadata:
+        type: "TEXT"
+        description: ""
+        scope: "SHARED"
+        visibility: "PUBLIC"
+      defaultValue: "curated"
+    targetTable:
+      metadata:
+        type: "TEXT"
+        description: ""
+        scope: "SHARED"
+        visibility: "PUBLIC"
+      defaultValue: "customer"
+    targetDb:
+      metadata:
+        type: "TEXT"
+        description: ""
+        scope: "SHARED"
+        visibility: "PUBLIC"
+      defaultValue: "retail_db"
+    sourceSchema:
+      metadata:
+        type: "TEXT"
+        description: "Schema holding the source metadata table"
+        scope: "SHARED"
+        visibility: "PUBLIC"
+      defaultValue: "TPCH_SF1"
+    sourceTable:
+      metadata:
+        type: "TEXT"
+        description: "Source metadata table"
+        scope: "SHARED"
+        visibility: "PUBLIC"
+      defaultValue: "customer"
+    sourceDb:
+      metadata:
+        type: "TEXT"
+        description: "Database holding the source metadata table"
+        scope: "SHARED"
+        visibility: "PUBLIC"
+      defaultValue: "SNOWFLAKE_SAMPLE_DATA"
+design:
+  components:
+    SQL:
+      position:
+        x: 0
+        "y": 0
+      tempMetlId:
+    Table Output:
+      position:
+        x: 160
+        "y": 0
+      tempMetlId:
